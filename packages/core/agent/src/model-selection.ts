@@ -63,6 +63,14 @@ function modelSwitchNotice(previous: ModelSelection, selected: ModelSelection) {
  * surfaces. An absent selected effort clears any inherited effort, restoring
  * the selected model's provider/default behavior.
  *
+ * This listener overwrites provider/model/effort on every request from
+ * `selection.assembled`, which is captured from `selection.current` at the
+ * start of prompt assembly. The single authority for "what model does this
+ * request use" is therefore `current` in the owning entry point (e.g.
+ * `ApiSessionAgentController.selectionFor().current`): if a child's resolved
+ * route is being clobbered by a later default, fix `current`, do not add a
+ * second overwrite plugin here.
+ *
  * A provider/model change appends a durable user-role notice to the next
  * admitted request. It compares the assembled selection with the latest
  * request header; effort-only changes and empty no-request decisions add no

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { Agent, AgentOptions } from '@deepseek-ai/dsh-agent'
 import { agentPresetProjectionDefinition } from '@deepseek-ai/dsh-agent-presets'
 import SessionStore, { SESSION_FORMAT_VERSION, SessionLogOffset, SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
@@ -451,5 +451,98 @@ describe('ApiSession create or adoption', () => {
     writeFileSync(file, 'not a directory')
     await expect(agents.ensureSession(SessionId('mkdir-failure'), join(file, 'child'), false))
       .rejects.toThrow('failed to ensure project directory')
+  })
+})
+
+/**
+ * Child model-selection precedence for a fresh (no logged request header)
+ * Agent. The deployment default here is jupiter-ai/Laguna-XS-2.1-APEX; a child
+ * spawned under a non-default route must keep that route instead of falling
+ * back to the default on its first request.
+ */
+describe('ApiSession child model selection precedence', () => {
+  function agentWithOptions(ctx: Context, meta: SessionHeader, options: AgentOptions): Agent {
+    const base = agent(ctx, meta)
+    return { ...base, options } as Agent
+  }
+
+  async function harnessWithDefault(
+    defaultSelection: { provider: string; model: string },
+  ): Promise<{ ctx: Context; agents: ApiSessionAgentController }> {
+    const ctx = new Context()
+    roots.push(ctx)
+    await ctx.plugin(TypertRegistry)
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(AgentRegistry)
+    installSessionReadTestServices(ctx)
+    ctx.sessionProjections.register(agentPresetProjectionDefinition)
+    installModelSelectionProjection(ctx)
+    ctx.provide('agentDefaultModel', {
+      currentSelection: () => defaultSelection,
+      saveSelection: () => Promise.resolve(),
+    } as never)
+    return { ctx, agents: new ApiSessionAgentController(ctx) }
+  }
+
+  const jupiter = { provider: 'jupiter-ai', model: 'Laguna-XS-2.1-APEX' }
+  const longcat = { provider: 'longcat', model: 'LongCat-2.0' }
+
+  it('explicit child longcat survives default jupiter', async () => {
+    const { ctx, agents } = await harnessWithDefault(jupiter)
+    const child = agentWithOptions(ctx, header('explicit-child'), { ...longcat })
+    expect(agents.selectionFor(child).current).toEqual(longcat)
+  })
+
+  it('omitted child inherits live parent longcat', async () => {
+    const { ctx, agents } = await harnessWithDefault(jupiter)
+    // Parent is live on LongCat: its last request header names longcat.
+    const parent = agent(ctx, header('live-parent'))
+    parent.session.append('request/header', {
+      header: { config: { ...longcat } },
+      reason: 'initial',
+    })
+    // resolveChildAgentOptions copies the parent's LIVE route into the child's
+    // options, so a child started with no explicit model carries longcat here.
+    const child = agentWithOptions(ctx, header('omitted-child'), { ...longcat })
+    expect(agents.selectionFor(child).current).toEqual(longcat)
+  })
+
+  it('route-policy tier written to child options is not smashed by the default', async () => {
+    const { ctx, agents } = await harnessWithDefault(jupiter)
+    // Out-of-tree route-policy resolves a tier for this child and writes the
+    // resulting provider/model into the child's agentOptions at spawn. Mock that
+    // write and assert selectionFor honors it instead of the default.
+    const child = agentWithOptions(ctx, header('routed-child'), { ...longcat })
+    expect(agents.selectionFor(child).current).toEqual(longcat)
+  })
+
+  it('picked wins over agent options', async () => {
+    const { ctx, agents } = await harnessWithDefault(jupiter)
+    const child = agentWithOptions(ctx, header('picked-child'), { ...longcat })
+    agents.selectForNextRequest(child, { ...jupiter, reasoningEffort: 'medium' as never })
+    expect(agents.selectionFor(child).current).toEqual({ ...jupiter, reasoningEffort: 'medium' })
+  })
+
+  it('logged header wins over stale options', async () => {
+    const { ctx, agents } = await harnessWithDefault(jupiter)
+    const child = agentWithOptions(ctx, header('stale-options-child'), { ...longcat })
+    child.session.append('request/header', {
+      header: { config: { ...jupiter } },
+      reason: 'initial',
+    })
+    expect(agents.selectionFor(child).current).toEqual(jupiter)
+  })
+
+  it('base profile with no options and no header falls back to the default', async () => {
+    const { ctx, agents } = await harnessWithDefault(jupiter)
+    const base = agent(ctx, header('base-profile'))
+    expect(agents.selectionFor(base).current).toEqual(jupiter)
+  })
+
+  it('child options missing a model fall back to the default, not a half-route', async () => {
+    const { ctx, agents } = await harnessWithDefault(jupiter)
+    // A partial route (provider only) must not be treated as a child selection.
+    const child = agentWithOptions(ctx, header('partial-child'), { provider: 'longcat' })
+    expect(agents.selectionFor(child).current).toEqual(jupiter)
   })
 })

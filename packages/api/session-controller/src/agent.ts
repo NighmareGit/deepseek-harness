@@ -288,7 +288,28 @@ export class ApiSessionAgentController {
       get current(): AgentModelSelection {
         if (picked !== undefined) return picked
         const loggedHeader = agent.session.requestHeader()
-        if (loggedHeader === undefined) return defaultModel.currentSelection()
+        if (loggedHeader === undefined) {
+          // No logged request header (fresh Agent, no resume). Prefer the
+          // resolved child AgentOptions — an honorRequested route, a route-policy
+          // tier, or the parent's live route copied in at spawn — over the
+          // deployment default. Without this, a child started under a non-default
+          // route falls back to agent-default-model on its first request and the
+          // assembled selection overwrites the route the child was started with.
+          const options = agent.options
+          if (options?.provider !== undefined && options.model !== undefined) {
+            // Fall back to the deployment default's effort when the resolved
+            // child options omit one, so a top-level Agent keeps the default
+            // model's effort instead of silently dropping it.
+            const reasoningEffort = options.reasoningEffort
+              ?? defaultModel.currentSelection().reasoningEffort
+            return {
+              provider: options.provider,
+              model: options.model,
+              ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
+            }
+          }
+          return defaultModel.currentSelection()
+        }
         const logged = loggedHeader.config
         return {
           provider: logged.provider,
