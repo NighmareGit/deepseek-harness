@@ -652,7 +652,12 @@ export function apply(ctx: Context, config: Config, session?: Session): void {
 
   const compositionScope = scopeOf(ctx)
   if (compositionScope === undefined) {
-    throw new Error('tool-subagent: standing `modelSelectionSettings` requires a scoped preset Context')
+    // No preset scope (base profiles compose tool-subagent as a standing
+    // entry). Install model selection at the standing level from current
+    // settings; agents inherit the tool and its policy from this context.
+    const current = settings.current()
+    install(ctx, current.enabled ? { routes: current.allowedModels } : undefined)
+    return
   }
   const agents = ctx.get('agents')
   /* v8 ignore next -- shipped preset compositions always include the Agent registry. */
