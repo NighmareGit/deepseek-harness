@@ -23,6 +23,14 @@ function readSettings(ctx) {
   }
 }
 
+function matrixOf(ctx, settings) {
+  return settings['route-authority']?.matrix
+    ?? ctx.routeRecipes?.result?.compiled
+    ?? settings['route-recipes']?.compiled
+    ?? settings['route-policy']
+    ?? {}
+}
+
 function liveOf(agent) {
   if (!agent) return undefined
   return stamps.get(agent) ?? fromHeader(agent.session?.requestHeader?.())
@@ -43,11 +51,12 @@ function log(ctx, config, message, extra) {
 
 function decide(ctx, config, agent, requested) {
   const settings = readSettings(ctx)
-  const matrix = settings['route-authority']?.matrix ?? settings['route-policy'] ?? {}
+  const matrix = matrixOf(ctx, settings)
   const header = agent?.session?.header ?? {}
   const policy = selectPolicyRoute(matrix, {
     label: header.label ?? header.title,
     persona: header.persona,
+    faculty: header.faculty ?? requested?.faculty,
     depth: header.depth ?? (header.origin === 'subagent' ? 1 : 0),
     role: header.role,
   })
@@ -111,6 +120,7 @@ function wrapSubagents(ctx, config) {
     subagents[methodName] = async function wrapped(request) {
       const parent = request?.parent
       const requested = request?.agentOptions
+      const faculty = request?.faculty ?? requested?.faculty ?? request?.persona
       const synthetic = {
         options: requested,
         session: {
@@ -119,6 +129,7 @@ function wrapSubagents(ctx, config) {
             parentSession: parent?.id ?? parent?.session?.id,
             label: request?.label,
             persona: request?.persona,
+            faculty,
             depth: (parent?.session?.header?.depth ?? 0) + 1,
           },
           requestHeader: () => undefined,

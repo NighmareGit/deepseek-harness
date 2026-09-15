@@ -53,3 +53,25 @@ test('policy verify* selects longcat-300k', () => {
   const route = selectPolicyRoute(matrix, { label: 'verify-fix', depth: 1 })
   assert.equal(route.model, 'LongCat-2.0')
 })
+
+test('policy faculty implement selects long-ctx', () => {
+  const matrix = {
+    tiers: { 'long-ctx': longcat },
+    rules: [{ match: { faculty: 'implement' }, select: { tier: 'long-ctx' } }],
+    roles: { implement: { tier: 'long-ctx' } },
+  }
+  const route = selectPolicyRoute(matrix, { faculty: 'implement', depth: 1 })
+  assert.equal(key(route), 'longcat/LongCat-2.0')
+  assert.equal(route.source, 'policy:long-ctx')
+})
+
+test('policy role fallback uses faculty when no rule hits', () => {
+  const matrix = {
+    tiers: { 'cheap-local': jupiter },
+    rules: [],
+    roles: { recon: { tier: 'cheap-local' } },
+  }
+  const route = selectPolicyRoute(matrix, { faculty: 'recon' })
+  assert.equal(route.source, 'role:recon')
+  assert.equal(route.provider, 'jupiter-ai')
+})
