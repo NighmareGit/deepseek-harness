@@ -7,6 +7,10 @@ function globToRegExp(pattern) {
 
 export function matchRule(rule, ctx) {
   const match = rule?.match ?? {}
+  if (match.faculty) {
+    const faculty = String(ctx.faculty ?? ctx.persona ?? ctx.role ?? '')
+    if (faculty !== String(match.faculty)) return false
+  }
   if (match.label) {
     const labels = [].concat(ctx.label ?? ctx.labels ?? [])
     const re = globToRegExp(match.label)
@@ -35,7 +39,7 @@ export function selectPolicyRoute(matrix, ctx) {
       }
     }
   }
-  const roleName = ctx.persona ?? ctx.role
+  const roleName = ctx.faculty ?? ctx.persona ?? ctx.role
   const role = roleName ? matrix.roles?.[roleName] : undefined
   if (role?.tier && tiers[role.tier]) {
     const tier = tiers[role.tier]
