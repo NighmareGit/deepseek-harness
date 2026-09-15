@@ -1,6 +1,8 @@
 function globToRegExp(pattern) {
-  const escaped = String(pattern).replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')
-  return new RegExp(`^${escaped}$`, 'i')
+  const escaped = String(pattern)
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*')
+  return new RegExp('^' + escaped + '$', 'i')
 }
 
 export function matchRule(rule, ctx) {
