@@ -1,0 +1,34 @@
+{
+  "name": "dsh-route-authority",
+  "version": "0.1.0",
+  "description": "Last-write LLM route authority for DSH subagent and workflow children. No core fork.",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "plugin",
+    "subagent",
+    "workflow",
+    "routing"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,12 @@
+# Last-write route authority. Load after dsh-base / dsh-web-app so
+# agent/request wraps installModelSelection (later listener = outer onion).
+- insert:
+    - id: route-authority
+      name: dsh-route-authority
+      config:
+        enabled: true
+        honorRequested: true
+        inheritParentLive: true
+        enforceOnRequest: true
+        wrapSubagentStart: true
+        log: true
