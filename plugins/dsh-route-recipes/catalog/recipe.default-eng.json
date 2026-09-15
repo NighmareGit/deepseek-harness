@@ -1,0 +1,18 @@
+{
+  "id": "default-eng",
+  "description": "ACE / scout-explore default. Faculty to slot only.",
+  "fallbackSlot": "mid",
+  "bindings": {
+    "orchestrate": "mid",
+    "recon": "cheap-local",
+    "prd": "mid",
+    "plan": "long-ctx",
+    "review.pragmatic": "mid",
+    "review.chaos": "mid",
+    "review.adversarial": "mid",
+    "review.implementability": "cheap-local",
+    "innovate.blueprint": "mid",
+    "implement": "long-ctx",
+    "verify.gates": "test"
+  }
+}

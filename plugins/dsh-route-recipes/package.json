@@ -1,0 +1,39 @@
+{
+  "name": "dsh-route-recipes",
+  "version": "0.1.0",
+  "description": "Faculty/slot/recipe compiler that writes a route-authority matrix. Does not stamp routes.",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "lib",
+    "catalog",
+    "protocols",
+    "cordis.patch.yml",
+    "README.md",
+    "ADR.md",
+    "SCHEMA.md",
+    "UX.md",
+    "SHIP.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "plugin",
+    "routing",
+    "recipes"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,9 @@
+# Config compiler. Load BEFORE route-authority so ctx.routeRecipes exists
+# when authority first stamps a child.
+- insert:
+    - id: route-recipes
+      name: dsh-route-recipes
+      config:
+        enabled: true
+        activeRecipe: default-eng
+        log: true
